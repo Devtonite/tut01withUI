@@ -2,6 +2,7 @@ import {
   Circuit,
   Experimental,
   Field,
+  Int64,
   SelfProof,
   Struct,
   UInt32,
@@ -12,7 +13,7 @@ export class GameState extends Struct({
   scoreP1: Field,
   scoreP2: Field,
   // show winner: -1: round has not started, 0: tie, 1: P1 wins, 2: P2 wins
-  winner: Field,
+  winner: Int64,
   // moves: 0: Rock, 1: Paper, 2: Scissors
   p1moveHash: UInt32,
   p2moveHash: UInt32,
@@ -29,7 +30,7 @@ export class GameState extends Struct({
   setP2Move(move: UInt32) {
     this.p2moveHash = move;
   }
-  setWinner(result: Field) {
+  setWinner(result: Int64) {
     this.winner = result;
   }
 }
@@ -41,11 +42,11 @@ export const RpsGame = Experimental.ZkProgram({
     init: {
       privateInputs: [],
       method(publicInput: GameState) {
-        publicInput.scoreP1.assertEquals(Field(0));
-        publicInput.scoreP2.assertEquals(Field(0));
-        publicInput.winner.assertEquals(Field(-1));
-        publicInput.p1moveHash.assertEquals(UInt32.from(3));
-        publicInput.p2moveHash.assertEquals(UInt32.from(3));
+        // publicInput.scoreP1.assertEquals(Field(0));
+        // publicInput.scoreP2.assertEquals(Field(0));
+        // publicInput.p1moveHash.assertEquals(UInt32.from(3));
+        // publicInput.p2moveHash.assertEquals(UInt32.from(3));
+        publicInput.winner.assertEquals(Int64.from(-1));
       },
     },
 
@@ -57,12 +58,12 @@ export const RpsGame = Experimental.ZkProgram({
         prevProof: SelfProof<GameState>
       ) {
         prevProof.verify();
-        prevProof.publicInput.p1moveHash.assertEquals(UInt32.from(3));
-        prevProof.publicInput.p2moveHash.assertEquals(UInt32.from(3));
+        // prevProof.publicInput.p1moveHash.assertEquals(UInt32.from(3));
+        // prevProof.publicInput.p2moveHash.assertEquals(UInt32.from(3));
 
+        // publicInput.setP1Move(p1Move);
         publicInput.p1moveHash.assertGte(UInt32.from(0));
         publicInput.p1moveHash.assertLte(UInt32.from(2));
-        publicInput.setP1Move(p1Move);
       },
     },
 
@@ -74,27 +75,22 @@ export const RpsGame = Experimental.ZkProgram({
         prevProof: SelfProof<GameState>
       ) {
         prevProof.verify();
-        prevProof.publicInput.p1moveHash.assertEquals(UInt32.from(3));
-        prevProof.publicInput.p2moveHash.assertEquals(UInt32.from(3));
+        // prevProof.publicInput.p1moveHash.assertEquals(UInt32.from(3));
+        // prevProof.publicInput.p2moveHash.assertEquals(UInt32.from(3));
 
+        // publicInput.setP2Move(p2Move);
         publicInput.p2moveHash.assertGte(UInt32.from(0));
         publicInput.p2moveHash.assertLte(UInt32.from(2));
-        publicInput.setP2Move(p2Move);
       },
     },
 
     compareMoves: {
-      privateInputs: [SelfProof, SelfProof],
-      method(
-        publicInput: GameState,
-        prevProofP1: SelfProof<GameState>,
-        prevProofP2: SelfProof<GameState>
-      ) {
-        prevProofP1.verify();
-        prevProofP2.verify();
+      privateInputs: [SelfProof],
+      method(publicInput: GameState, prevProof: SelfProof<GameState>) {
+        prevProof.verify();
 
-        const player1 = prevProofP1.publicInput.p1moveHash;
-        const player2 = prevProofP2.publicInput.p2moveHash;
+        const player1 = prevProof.publicInput.p1moveHash;
+        const player2 = prevProof.publicInput.p2moveHash;
 
         const winner = Circuit.switch(
           [
@@ -108,10 +104,19 @@ export const RpsGame = Experimental.ZkProgram({
             player1.equals(UInt32.from(2)).and(player2.equals(UInt32.from(0))),
             player1.equals(UInt32.from(2)).and(player2.equals(UInt32.from(1))),
           ],
-          Field,
-          [Field(0), Field(2), Field(1), Field(1), Field(2), Field(2), Field(1)]
+          Int64,
+          [
+            Int64.from(0),
+            Int64.from(2),
+            Int64.from(1),
+            Int64.from(1),
+            Int64.from(2),
+            Int64.from(2),
+            Int64.from(1),
+          ]
         );
-        publicInput.setWinner(winner);
+
+        publicInput.winner.assertEquals(winner);
       },
     },
   },
